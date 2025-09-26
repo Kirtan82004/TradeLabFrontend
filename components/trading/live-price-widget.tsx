@@ -53,7 +53,7 @@ export function LivePriceWidget() {
   useEffect(() => {
     setIsLoading(true)
     fetchPrice()
-    const interval = setInterval(fetchPrice, 5000)
+    const interval = setInterval(fetchPrice, 15000)
     return () => clearInterval(interval)
   }, [selectedSymbol])
 
