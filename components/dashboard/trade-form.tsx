@@ -10,28 +10,35 @@ import { useToast } from "@/hooks/use-toast"
 import { tradingService } from "@/lib/trading"
 import { walletService } from "@/lib/wallet"
 import { TrendingUp, TrendingDown } from "lucide-react"
-import { useSelector, useDispatch } from "react-redux"
-import { RootState } from "@/store/store"
+import { useDispatch } from "react-redux"
 import { addTrade } from "@/store/tradesSlice"
 import { updateBalance } from "@/store/walletSlice"
 
 const POPULAR_SYMBOLS = ["BTCUSDT", "ETHUSDT", "ADAUSDT", "SOLUSDT", "DOTUSDT"]
-const DEFAULT_SIDE: "buy" | "sell" = "buy"
+type TradeSide = "buy" | "sell"
 
 export function TradeForm() {
-  const [symbol, setSymbol] = useState(POPULAR_SYMBOLS[0])
-  const [quantity, setQuantity] = useState("")
-  const [side, setSide] = useState<"buy" | "sell">(DEFAULT_SIDE)
+  const [formState, setFormState] = useState({
+    symbol: POPULAR_SYMBOLS[0],
+    quantity: "",
+    side: "buy" as TradeSide,
+  })
   const [isLoading, setIsLoading] = useState(false)
   const { toast } = useToast()
   const dispatch = useDispatch()
-  const { trades, loading, error } = useSelector((state: RootState) => state.trade)
+
+  const handleChange = (key: keyof typeof formState, value: string) => {
+    setFormState((prev) => ({ ...prev, [key]: value }))
+  }
+
+  const extractErrorMessage = (error: any) =>
+    error?.response?.data?.message || error?.message || "Failed to place trade"
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    const qty = parseFloat(formState.quantity)
 
-    const qty = parseFloat(quantity)
-    if (!symbol || isNaN(qty) || qty <= 0) {
+    if (!formState.symbol || isNaN(qty) || qty <= 0) {
       toast({
         title: "Invalid input",
         description: "Please select a trading pair and enter a valid quantity",
@@ -42,28 +49,27 @@ export function TradeForm() {
 
     setIsLoading(true)
     try {
-      const data = await tradingService.placeTrade({ symbol, quantity: qty, side })
-      // Update trades in Redux store
-      dispatch(addTrade(data))
-      // Show success toast
-      toast({
-        title: "Trade placed successfully!",
-        description: `${side.toUpperCase()} ${qty} ${symbol}`,
+      const data = await tradingService.placeTrade({
+        symbol: formState.symbol,
+        quantity: qty,
+        side: formState.side,
       })
 
-      // Refresh wallet (if you want WalletCard to update)
+      dispatch(addTrade(data))
+
+      toast({
+        title: "Trade placed successfully!",
+        description: `${formState.side.toUpperCase()} ${qty} ${formState.symbol}`,
+      })
+
       const updatedWallet = await walletService.getWallet()
       dispatch(updateBalance(updatedWallet.balance))
-      console.log("Updated wallet:", updatedWallet)
 
-      // Reset form
-      setSymbol(POPULAR_SYMBOLS[0])
-      setQuantity("")
-      setSide(DEFAULT_SIDE)
-    } catch (error: any) {
+      setFormState({ symbol: POPULAR_SYMBOLS[0], quantity: "", side: "buy" })
+    } catch (error) {
       toast({
         title: "Trade failed",
-        description: error?.response?.data?.message || error?.message || "Failed to place trade",
+        description: extractErrorMessage(error),
         variant: "destructive",
       })
     } finally {
@@ -81,9 +87,10 @@ export function TradeForm() {
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Trading Pair */}
           <div className="space-y-2">
             <Label htmlFor="symbol">Trading Pair</Label>
-            <Select value={symbol} onValueChange={setSymbol}>
+            <Select value={formState.symbol} onValueChange={(val) => handleChange("symbol", val)}>
               <SelectTrigger>
                 <SelectValue placeholder="Select trading pair" />
               </SelectTrigger>
@@ -97,6 +104,7 @@ export function TradeForm() {
             </Select>
           </div>
 
+          {/* Quantity */}
           <div className="space-y-2">
             <Label htmlFor="quantity">Quantity</Label>
             <Input
@@ -104,41 +112,59 @@ export function TradeForm() {
               type="number"
               step="0.00000001"
               placeholder="Enter quantity"
-              value={quantity}
-              onChange={(e) => setQuantity(e.target.value)}
+              value={formState.quantity}
+              onChange={(e) => handleChange("quantity", e.target.value)}
               required
             />
           </div>
 
+          {/* Side Selection */}
           <div className="space-y-2">
             <Label>Order Type</Label>
             <div className="flex gap-2">
-              <Button
-                type="button"
-                variant={side === "buy" ? "default" : "outline"}
-                className={`flex-1 ${side === "buy" ? "bg-green-600 hover:bg-green-700" : ""}`}
-                onClick={() => setSide("buy")}
-              >
-                <TrendingUp className="h-4 w-4 mr-1" />
-                Buy
-              </Button>
-              <Button
-                type="button"
-                variant={side === "sell" ? "default" : "outline"}
-                className={`flex-1 ${side === "sell" ? "bg-red-600 hover:bg-red-700" : ""}`}
-                onClick={() => setSide("sell")}
-              >
-                <TrendingDown className="h-4 w-4 mr-1" />
-                Sell
-              </Button>
+              <SideButton
+                side="buy"
+                active={formState.side === "buy"}
+                onClick={() => handleChange("side", "buy")}
+              />
+              <SideButton
+                side="sell"
+                active={formState.side === "sell"}
+                onClick={() => handleChange("side", "sell")}
+              />
             </div>
           </div>
 
+          {/* Submit */}
           <Button type="submit" className="w-full" disabled={isLoading}>
-            {isLoading ? "Placing trade..." : `Place ${side.toUpperCase()} Order`}
+            {isLoading ? "Placing trade..." : `Place ${formState.side.toUpperCase()} Order`}
           </Button>
         </form>
       </CardContent>
     </Card>
+  )
+}
+
+function SideButton({
+  side,
+  active,
+  onClick,
+}: {
+  side: TradeSide
+  active: boolean
+  onClick: () => void
+}) {
+  const isBuy = side === "buy"
+  const Icon = isBuy ? TrendingUp : TrendingDown
+  return (
+    <Button
+      type="button"
+      variant={active ? "default" : "outline"}
+      className={`flex-1 ${active ? (isBuy ? "bg-green-600 hover:bg-green-700" : "bg-red-600 hover:bg-red-700") : ""}`}
+      onClick={onClick}
+    >
+      <Icon className="h-4 w-4 mr-1" />
+      {isBuy ? "Buy" : "Sell"}
+    </Button>
   )
 }

@@ -23,19 +23,11 @@ export function LivePriceWidget() {
   const [isLoading, setIsLoading] = useState(true)
   const [isConnected, setIsConnected] = useState(false)
 
+  // 📡 Socket subscription
   useEffect(() => {
-    // Connect to socket for real-time updates
     const socket = socketService.connect()
 
-    socket.on("connect", () => {
-      setIsConnected(true)
-    })
-
-    socket.on("disconnect", () => {
-      setIsConnected(false)
-    })
-
-    socket.on("priceUpdate", (data: { symbol: string; price: number; change24h?: number }) => {
+    const handleUpdate = (data: { symbol: string; price: number; change24h?: number }) => {
       if (data.symbol === selectedSymbol) {
         setPriceData({
           symbol: data.symbol,
@@ -43,20 +35,25 @@ export function LivePriceWidget() {
           change24h: data.change24h,
           lastUpdate: new Date(),
         })
+        setIsLoading(false)
       }
-    })
+    }
+
+    socket.on("connect", () => setIsConnected(true))
+    socket.on("disconnect", () => setIsConnected(false))
+    socket.on("priceUpdate", handleUpdate)
 
     return () => {
+      socket.off("priceUpdate", handleUpdate)
       socketService.disconnect()
     }
   }, [selectedSymbol])
 
+  // 🌐 REST fallback fetch
   useEffect(() => {
+    setIsLoading(true)
     fetchPrice()
-
-    // Auto-refresh every 5 seconds as fallback
     const interval = setInterval(fetchPrice, 5000)
-
     return () => clearInterval(interval)
   }, [selectedSymbol])
 
@@ -66,7 +63,7 @@ export function LivePriceWidget() {
       setPriceData({
         symbol: data.symbol,
         price: data.price,
-        change24h: Math.random() * 10 - 5, // Mock 24h change
+        change24h: Math.random() * 10 - 5, // ⚠️ Replace mock with API real %change
         lastUpdate: new Date(),
       })
     } catch (error) {
@@ -76,23 +73,17 @@ export function LivePriceWidget() {
     }
   }
 
-  const formatPrice = (price: number) => {
-    return new Intl.NumberFormat("en-US", {
+  // 🛠️ Helpers
+  const formatPrice = (price: number) =>
+    new Intl.NumberFormat("en-US", {
       style: "currency",
       currency: "USD",
       minimumFractionDigits: 2,
       maximumFractionDigits: 8,
     }).format(price)
-  }
 
-  const formatTime = (date: Date) => {
-    return date.toLocaleTimeString("en-US", {
-      hour12: false,
-      hour: "2-digit",
-      minute: "2-digit",
-      second: "2-digit",
-    })
-  }
+  const formatTime = (date: Date) =>
+    date.toLocaleTimeString("en-US", { hour12: false, hour: "2-digit", minute: "2-digit", second: "2-digit" })
 
   return (
     <Card className="bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20">
@@ -110,10 +101,12 @@ export function LivePriceWidget() {
           </Badge>
         </div>
       </CardHeader>
+
       <CardContent className="space-y-4">
+        {/* Symbol Selector */}
         <Select value={selectedSymbol} onValueChange={setSelectedSymbol}>
           <SelectTrigger>
-            <SelectValue />
+            <SelectValue placeholder="Select symbol" />
           </SelectTrigger>
           <SelectContent>
             {SYMBOLS.map((symbol) => (
@@ -124,35 +117,31 @@ export function LivePriceWidget() {
           </SelectContent>
         </Select>
 
+        {/* Price Display */}
         {isLoading ? (
           <div className="flex items-center justify-center py-8">
             <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
           </div>
         ) : priceData ? (
-          <div className="space-y-3">
-            <div className="text-center">
-              <div className="text-3xl font-bold text-foreground">{formatPrice(priceData.price)}</div>
-              {priceData.change24h !== undefined && (
-                <div className="flex items-center justify-center gap-1 mt-1">
-                  {priceData.change24h >= 0 ? (
-                    <TrendingUp className="h-4 w-4 text-green-500" />
-                  ) : (
-                    <TrendingDown className="h-4 w-4 text-red-500" />
-                  )}
-                  <span
-                    className={`text-sm font-medium ${priceData.change24h >= 0 ? "text-green-500" : "text-red-500"}`}
-                  >
-                    {priceData.change24h >= 0 ? "+" : ""}
-                    {priceData.change24h.toFixed(2)}%
-                  </span>
-                  <span className="text-xs text-muted-foreground ml-1">24h</span>
-                </div>
-              )}
-            </div>
+          <div className="space-y-3 text-center">
+            <div className="text-3xl font-bold text-foreground">{formatPrice(priceData.price)}</div>
 
-            <div className="text-center text-xs text-muted-foreground">
-              Last updated: {formatTime(priceData.lastUpdate)}
-            </div>
+            {priceData.change24h !== undefined && (
+              <div className="flex items-center justify-center gap-1 mt-1">
+                {priceData.change24h >= 0 ? (
+                  <TrendingUp className="h-4 w-4 text-green-500" />
+                ) : (
+                  <TrendingDown className="h-4 w-4 text-red-500" />
+                )}
+                <span className={`text-sm font-medium ${priceData.change24h >= 0 ? "text-green-500" : "text-red-500"}`}>
+                  {priceData.change24h >= 0 ? "+" : ""}
+                  {priceData.change24h.toFixed(2)}%
+                </span>
+                <span className="text-xs text-muted-foreground ml-1">24h</span>
+              </div>
+            )}
+
+            <div className="text-xs text-muted-foreground">Last updated: {formatTime(priceData.lastUpdate)}</div>
           </div>
         ) : (
           <div className="text-center py-4 text-muted-foreground">Failed to load price data</div>

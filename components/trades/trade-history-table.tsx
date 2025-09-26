@@ -1,87 +1,54 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { useToast } from "@/hooks/use-toast"
-import { tradingService, type Trade } from "@/lib/trading"
 import { X, TrendingUp, TrendingDown } from "lucide-react"
-import { useDispatch,useSelector } from "react-redux"
-import { RootState } from "@/store/store"
+import { useAppDispatch, useAppSelector } from "@/store/hooks"
+import { fetchTrades, closeTrade } from "@/store/tradesSlice"
 
 export function TradeHistoryTable() {
-  const [trades, setTrades] = useState<Trade[]>([])
-  const [isLoading, setIsLoading] = useState(true)
-  const [closingTrade, setClosingTrade] = useState<string | null>(null)
+  const dispatch = useAppDispatch()
+  const { trades, loading, closingTradeId, error } = useAppSelector((state) => state.trade)
   const { toast } = useToast()
- 
 
-
+  // Fetch trades on mount
   useEffect(() => {
-    fetchTrades()
-    console.log("Fetched trades in useEffect:", trades)
-  }, [trades.length])
+    dispatch(fetchTrades())
+  }, [dispatch])
 
-
-  const fetchTrades = async () => {
-    try {
-      const userTrades = await tradingService.getUserTrades()
-      console.log("Fetched trades in fetchTrades:", userTrades)
-      setTrades(userTrades)
-    } catch (error) {
+  // Show error via toast if any
+  useEffect(() => {
+    if (error) {
       toast({
-        title: "Failed to load trades",
-        description: "Could not fetch your trade history",
+        title: "Error",
+        description: error,
         variant: "destructive",
       })
-    } finally {
-      setIsLoading(false)
     }
-  }
-  const handleCloseTrade = async (tradeId: string) => {
-    setClosingTrade(tradeId)
-    try {
-      
-      await tradingService.closeTrade(tradeId)
-      toast({
-        title: "Trade closed",
-        description: "Position has been closed successfully",
-      })
-      // Refresh trades
-      await fetchTrades()
-    } catch (error: any) {
-      toast({
-        title: "Failed to close trade",
-        description: error.response?.data?.message || "Could not close position",
-        variant: "destructive",
-      })
-    } finally {
-      setClosingTrade(null)
-    }
-  }
+  }, [error, toast])
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat("en-US", {
+  const formatCurrency = (amount: number) =>
+    new Intl.NumberFormat("en-US", {
       style: "currency",
       currency: "USD",
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
     }).format(amount)
-  }
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("en-US", {
+  const formatDate = (dateString: string) =>
+    new Date(dateString).toLocaleDateString("en-US", {
       year: "numeric",
       month: "short",
       day: "numeric",
       hour: "2-digit",
       minute: "2-digit",
     })
-  }
 
-  if (isLoading) {
+  if (loading) {
     return (
       <Card>
         <CardHeader>
@@ -172,11 +139,11 @@ export function TradeHistoryTable() {
                         <Button
                           size="sm"
                           variant="outline"
-                          onClick={() => handleCloseTrade(trade._id)}
-                          disabled={closingTrade === trade._id}
+                          onClick={() => dispatch(closeTrade(trade._id))}
+                          disabled={closingTradeId === trade._id}
                           className="h-8 w-8 p-0"
                         >
-                          {closingTrade === trade._id ? (
+                          {closingTradeId === trade._id ? (
                             <div className="animate-spin rounded-full h-3 w-3 border-b border-current"></div>
                           ) : (
                             <X className="h-3 w-3" />
