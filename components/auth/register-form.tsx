@@ -37,9 +37,11 @@ export function RegisterForm() {
     setIsLoading(true)
 
     try {
-      const { accessToken, user } = await authService.register(fullName, email, password, phoneNo, address)
-      console.log("Registered user:", user)
-      authService.storeAuth(accessToken, user)
+      const data = await authService.register(fullName, email, password, phoneNo, address)
+
+      console.log("Registered user:", data)
+      //authService.storeAuth(accessToken, user)
+      
       
       toast({
         title: "Account created!",

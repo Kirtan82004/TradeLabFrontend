@@ -1,7 +1,7 @@
 import api from "./api"
 
 export interface User {
-  id: string
+  _id: string
   fullName: string
   email: string
   phoneNo: string
@@ -38,6 +38,9 @@ export const authService = {
       address,
     })
     console.log("response", response)
+    if (response.status === 201) {
+      this.login(email, password)
+    }
     return response.data as AuthResponse
   },
 
