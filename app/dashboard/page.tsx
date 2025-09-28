@@ -38,7 +38,7 @@ export default function DashboardPage() {
 
   useEffect(() => {
     fetchPrices()
-    const intervalId = window.setInterval(fetchPrices, 5000)
+    const intervalId = window.setInterval(fetchPrices, 500)
 
     return () => clearInterval(intervalId)
   }, [])
