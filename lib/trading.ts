@@ -21,18 +21,18 @@ export interface PlaceTradeRequest {
 
 export const tradingService = {
   async placeTrade(trade: PlaceTradeRequest): Promise<Trade> {
-    const response = await api.post("/trade/place", trade)
+    const response = await api.post("/trades/place", trade)
     return response.data // <-- make sure you return the array/object you need
   },
 
   async getUserTrades(): Promise<Trade[]> {
-    const response = await api.get("/user/trades")
+    const response = await api.get("/users/trades")
     return response.data// <-- return only the array of trades
   },
 
   async closeTrade(tradeId: string): Promise<Trade> {
     console.log("Closing trade with ID in :", tradeId)
-    const response = await api.post(`/trade/close/${tradeId}`)
+    const response = await api.post(`/trades/close/${tradeId}`)
     return response.data // <-- return updated trade
   },
 
