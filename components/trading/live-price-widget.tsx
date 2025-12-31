@@ -8,8 +8,14 @@ import { TrendingUp, TrendingDown, Activity } from "lucide-react"
 import { tradingService } from "@/lib/trading"
 import { socketService } from "@/lib/socket"
 
-const SYMBOLS = ["BTCUSDT", "ETHUSDT", "ADAUSDT", "SOLUSDT", "DOTUSDT"]
-
+const SYMBOLS = [
+  "XBTUSD",   // Bitcoin vs US Dollar
+  "ETHUSD",   // Ethereum vs US Dollar
+  "ADAUSD",   // Cardano vs US Dollar
+  "SOLUSD",   // Solana vs US Dollar
+  "DOTUSD"    // Polkadot vs US Dollar
+];
+console.log("SYMBOLS",SYMBOLS)
 interface PriceData {
   symbol: string
   price: number
@@ -18,7 +24,7 @@ interface PriceData {
 }
 
 export function LivePriceWidget() {
-  const [selectedSymbol, setSelectedSymbol] = useState("BTCUSDT")
+  const [selectedSymbol, setSelectedSymbol] = useState("XBTUSD")
   const [priceData, setPriceData] = useState<PriceData | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [isConnected, setIsConnected] = useState(false)
@@ -60,6 +66,7 @@ export function LivePriceWidget() {
   const fetchPrice = async () => {
     try {
       const data = await tradingService.getPrice(selectedSymbol)
+      console.log("Fetched price data:", data)
       setPriceData({
         symbol: data.symbol,
         price: data.price,
