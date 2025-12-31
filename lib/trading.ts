@@ -37,7 +37,7 @@ export const tradingService = {
   },
 
   async getPrice(symbol: string): Promise<{ symbol: string; price: number }> {
-    const response = await api.get(`/trade/live-price/${symbol}`)
+    const response = await api.get(`/trades/live-price/${symbol}`)
     return response.data
   },
 }
