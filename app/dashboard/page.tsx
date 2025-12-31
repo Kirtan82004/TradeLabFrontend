@@ -13,7 +13,14 @@ type PriceData = {
   price: number
 }
 
-const SYMBOLS = ["BTCUSDT", "ETHUSDT", "ADAUSDT", "SOLUSDT"] as const
+const SYMBOLS = [
+  "XBTUSD",   // Bitcoin vs US Dollar
+  "ETHUSD",   // Ethereum vs US Dollar
+  "ADAUSD",   // Cardano vs US Dollar
+  "SOLUSD",   // Solana vs US Dollar
+  "DOTUSD",   // Polkadot vs US Dollar
+];
+
 
 export default function DashboardPage() {
   const [prices, setPrices] = useState<PriceData[]>([])
@@ -38,7 +45,7 @@ export default function DashboardPage() {
 
   useEffect(() => {
     fetchPrices()
-    const intervalId = window.setInterval(fetchPrices, 5000)
+    const intervalId = window.setInterval(fetchPrices, 1000) // Refresh every 1 seconds
 
     return () => clearInterval(intervalId)
   }, [])
@@ -65,7 +72,7 @@ export default function DashboardPage() {
             <TradeForm />
           </div>
 
-          <PriceChart symbol="BTCUSDT" />
+          <PriceChart symbol="XBTUSD" />
         </div>
 
         {/* Right Column */}
@@ -94,7 +101,7 @@ export default function DashboardPage() {
                         coin.price >= 0 ? "text-green-600" : "text-red-600"
                       }`}
                     >
-                      ${coin.price.toFixed(2)}
+                      ${coin.price}
                     </span>
                   </div>
                 ))
